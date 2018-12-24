@@ -17,9 +17,9 @@
 #define I2C_DISPLAY_SDC 22
 
 
-#define LED_BRIGHTNESS_SHIFT_R 3
-#define LED_BRIGHTNESS_SHIFT_G 3
-#define LED_BRIGHTNESS_SHIFT_B 2
+#define LED_BRIGHTNESS_SHIFT_R 0
+#define LED_BRIGHTNESS_SHIFT_G 0
+#define LED_BRIGHTNESS_SHIFT_B 0
 
 typedef struct {
     byte r : 4;
