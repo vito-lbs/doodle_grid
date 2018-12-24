@@ -7,26 +7,6 @@ IP = '192.168.4.1'
 PORT = 27420
 
 c = 0
-buf = ''
+buf = "\x00" * 16 * 16 * 2
 
-(0...16).each do |x|
-  (0...16).each do |y|
-    buf << [x, y,
-            0, 0, 0
-           ].pack('ccccc')
-    c += 1
-
-    if buf.length > 500
-      c_b = [c].pack('c')
-      u.send(c_b + buf, 0, IP, PORT)
-      c = 0
-      buf = ''
-    end
-  end
-  print '.'
-end
-
-c_b = [c].pack('c')
-u.send(c_b + buf, 0, IP, PORT)
-c = 0
-buf = ''
+u.send(buf, 0, IP, PORT)

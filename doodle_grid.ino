@@ -7,18 +7,25 @@
 #include "fonts.h"
 //#include "hash.h"
 
-#define WIFI_SSID "twitter @vito_lbs"
+#define WIFI_SSID "https://hackers.town/@vito"
 
 #define UDP_LISTEN_PORT 27420
-#define UDP_PACKET_SIZE_MAX 512 // x, y, r, g, b
+#define UDP_PACKET_SIZE 512 // r, g, b
 
 #define I2C_DISPLAY_ADDRESS 0x3c
 #define I2C_DISPLAY_SDA 21
 #define I2C_DISPLAY_SDC 22
 
+
 #define LED_BRIGHTNESS_SHIFT_R 3
 #define LED_BRIGHTNESS_SHIFT_G 3
 #define LED_BRIGHTNESS_SHIFT_B 2
+
+typedef struct {
+    byte r : 4;
+    byte g : 4;
+    byte b : 4;
+} packet_color;
 
 #define LED_COUNT (16*16)
 
@@ -54,7 +61,8 @@ struct led_color_t black = {
 };
 
 WiFiUDP udp;
-byte udp_buf[UDP_PACKET_SIZE_MAX];
+byte udp_buf[UDP_PACKET_SIZE];
+packet_color* udp_packet_buf = (packet_color*) &udp_buf;
 
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
@@ -62,7 +70,7 @@ uint16_t cursor_y = 0;
 uint32_t packet_count = 0;
 uint16_t loop_count = 0;
 
-void debug_write(char* text);
+void debug_write(const char* text);
 
 void setup() {
   Serial.begin(115200);
@@ -91,6 +99,13 @@ void setup() {
   debug_write("trying ssid ");
   debug_write(WIFI_SSID);
   debug_write("\n");
+  Serial.print("sizeof packet_color ");
+Serial.println(sizeof(packet_color));
+Serial.print("sizeof byte ");
+Serial.println(sizeof(byte));
+Serial.print("udp_packet_buf / udp_buf");
+Serial.print((unsigned int)(void*)(udp_packet_buf), HEX);
+Serial.print((unsigned int)(void*)(&udp_buf), HEX);
 
   WiFi.softAP(WIFI_SSID);
 
@@ -117,57 +132,55 @@ void setup() {
 void loop() {
   int packet_size = udp.parsePacket();
 
-  if (6 > packet_size) {
+  if (packet_size < UDP_PACKET_SIZE) {
     delay(100);
     return;
   }
 
+  udp.read(udp_buf, UDP_PACKET_SIZE);
+
   packet_count++;
 
-  udp.read(udp_buf, UDP_PACKET_SIZE_MAX);
-  int count = udp_buf[0];
-  Serial.println(count);
-  for (int i = 0; i < count; i++) {
-    int cur_start =
-      1 + // count
-      (5 * i) // position
-      ;
+  Serial.println(packet_size);
 
-    int cur_end = cur_start + 4;
+    for (int dest_x = 0; dest_x < 16; dest_x++) {
+  for (int dest_y = 0; dest_y < 16; dest_y++) {
+    int mod_y = dest_y;
+      if (1 == (dest_x % 2)) mod_y = 15 - dest_y;
+      int cur_start = (16 * dest_x) + (dest_y);
+      packet_color cur_color = udp_packet_buf[cur_start];
+      int led_idx = ((dest_x * 16) + mod_y);
+      
+      Serial.print(led_idx);
+      Serial.print(" ");
+      Serial.print(cur_start);
+Serial.print(" ");  
+      Serial.print(cur_color.r);
+      Serial.print(" ");
+      Serial.print(cur_color.g);
+      Serial.print(" ");
+      Serial.print(cur_color.b);
+      Serial.println();
 
-    if (cur_end > packet_size) {
-      Serial.println("got count bigger than buf");
-      return;
+      led_strip_set_pixel_rgb(&led_strip,
+                              led_idx,
+                              cur_color.r >> LED_BRIGHTNESS_SHIFT_R,
+                              cur_color.g >> LED_BRIGHTNESS_SHIFT_G,
+                              cur_color.b >> LED_BRIGHTNESS_SHIFT_B);
+
+      // led_strip_show(&led_strip);
+
+
+      // led_strip_set_pixel_rgb(&led_strip,
+      //                         led_idx,
+      //                         cur_color.r,
+      //                         cur_color.g,
+      //                         cur_color.b);
     }
-
-    byte* cur_buf = udp_buf + cur_start;
-
-    int dest_x = cur_buf[0];
-    int dest_y = cur_buf[1];
-    int r = cur_buf[2] >> LED_BRIGHTNESS_SHIFT_R;
-    int g = cur_buf[3] >> LED_BRIGHTNESS_SHIFT_G;
-    int b = cur_buf[4] >> LED_BRIGHTNESS_SHIFT_B;
-
-    if (1 == (dest_x % 2)) {
-      dest_y = 15 - dest_y;
-    }
-
-    int led_idx = ((dest_x * 16) + dest_y) % LED_COUNT;
-
-    led_strip_set_pixel_rgb(&led_strip,
-                            led_idx,
-                            r,
-                            g,
-                            b);
-
-    led_strip_show(&led_strip);
-    led_strip_set_pixel_rgb(&led_strip,
-                            led_idx,
-                            r,
-                            g,
-                            b);
   }
+  
   led_strip_show(&led_strip);
+  
 }
 
 void debug_write(const char* text) {
@@ -175,7 +188,7 @@ void debug_write(const char* text) {
   bool newline = '\n' == text[len - 1];
   Serial.print(text);
   display.drawString(cursor_x, cursor_y, text);
-  if (newline) {
+  if (newline){ 
     cursor_y += 12;
     cursor_x = 0;
   } else {
@@ -184,7 +197,7 @@ void debug_write(const char* text) {
   display.display();
 }
 
-char* get_pip(int counter) {
+const char* get_pip(int counter) {
     switch (counter % 4) {
       case 0:
         return "-";
@@ -195,4 +208,6 @@ char* get_pip(int counter) {
       case 3:
         return "/";
     }
+
+    return "X";
 }

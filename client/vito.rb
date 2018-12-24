@@ -14,25 +14,15 @@ buf = ''
 
 (0...16).each do |x|
   (0...16).each do |y|
-    pix = i[x, y]
-    buf << [x, y,
-            BRIGHTNESS_MULTIPLIER * (pix >> 24),
-            BRIGHTNESS_MULTIPLIER * ((pix >> 16) & 0xFF),
-            BRIGHTNESS_MULTIPLIER * ((pix >> 8) & 0xFF)
-           ].pack('ccccc')
+    pix = i[x,y]
+    r = ((pix >> 24) & 0xFF) & 0b011111
+    g = ((pix >> 16) & 0xFF) & 0b011111
+    b = ((pix >>  8) & 0xFF) & 0b011111
+    val = (b << (5 + 5)) + (g << (5)) + (r)
+    buf << [val].pack('S')
     c += 1
-
-    if buf.length > 500
-      c_b = [c].pack('c')
-      u.send(c_b + buf, 0, IP, PORT)
-      c = 0
-      buf = ''
-    end
   end
   print '.'
 end
 
-c_b = [c].pack('c')
-u.send(c_b + buf, 0, IP, PORT)
-c = 0
-buf = ''
+u.send(buf, 0, IP, PORT)
