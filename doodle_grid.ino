@@ -7,7 +7,10 @@
 #include "fonts.h"
 //#include "hash.h"
 
-#define WIFI_SSID "https://hackers.town/@vito"
+// #define WIFI_SSID "https://hackers.town/@vito"
+
+#define WIFI_SSID "35C3-things"
+#define WIFI_PSK "congress2018"
 
 #define UDP_LISTEN_PORT 27420
 #define UDP_PACKET_SIZE 512 // r, g, b
@@ -71,6 +74,7 @@ uint32_t packet_count = 0;
 uint16_t loop_count = 0;
 
 void debug_write(const char* text);
+const char* get_pip(int counter);
 
 void setup() {
   Serial.begin(115200);
@@ -99,31 +103,26 @@ void setup() {
   debug_write("trying ssid ");
   debug_write(WIFI_SSID);
   debug_write("\n");
-  Serial.print("sizeof packet_color ");
-Serial.println(sizeof(packet_color));
-Serial.print("sizeof byte ");
-Serial.println(sizeof(byte));
-Serial.print("udp_packet_buf / udp_buf");
-Serial.print((unsigned int)(void*)(udp_packet_buf), HEX);
-Serial.print((unsigned int)(void*)(&udp_buf), HEX);
 
-  WiFi.softAP(WIFI_SSID);
 
-  /* int counter = 0; */
-  /* while (WiFi.status() != WL_CONNECTED) { */
-  /*   delay(500); */
-  /*   Serial.print("."); */
-  /*   display.drawString(cursor_x, cursor_y, " "); */
-  /*   display.drawString(cursor_x, cursor_y, get_pip(counter)); */
-  /*   display.display(); */
-  /*   counter++; */
-  /* } */
-  /* display.drawString(cursor_x, cursor_y, " "); */
+  // WiFi.softAP(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PSK);
 
-  /* debug_write("connected to wifi\n"); */
+  int counter = 0; 
+  while (WiFi.status() != WL_CONNECTED) { 
+    delay(500); 
+    Serial.print("."); 
+    display.drawString(cursor_x, cursor_y, " "); 
+    display.drawString(cursor_x, cursor_y, get_pip(counter)); 
+    display.display(); 
+    counter++; 
+  } 
+  display.drawString(cursor_x, cursor_y, " "); 
+
+  debug_write("connected to wifi\n"); 
   display.clear();
   cursor_y = 0;
-  debug_write(WiFi.softAPIP().toString().c_str());
+  debug_write(WiFi.localIP().toString().c_str());
   debug_write("\n");
 
   udp.begin(UDP_LISTEN_PORT);
